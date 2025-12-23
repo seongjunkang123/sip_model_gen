@@ -3,6 +3,7 @@ from keras.datasets import mnist
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras import layers
+import tensorflow as tf
 
 #import data
 (train_data, _), (_, _) = mnist.load_data()
@@ -48,64 +49,105 @@ generator = keras.Sequential(
 
 # print(generator.summary())
 
-discriminator.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
-    loss="binary_crossentropy",
-    metrics=["accuracy"]
-)
+class GAN(keras.Model):
+    def __init__(self, discriminator, generator, latent_dim):
+        super().__init__()
+        self.discriminator = discriminator
+        self.generator = generator
+        self.latent_dim = latent_dim
+        self.d_loss_metric = keras.metrics.Mean(name='d_loss')
+        self.g_loss_metric = keras.metrics.Mean(name='g_loss')
 
-discriminator.trainable = False
+    def compile(self, d_optimizer, g_optimizer, loss_fn):
+        super(GAN, self).compile()
+        self.d_optimizer = d_optimizer
+        self.g_optimizer = g_optimizer
+        self.loss_fn = loss_fn
 
-gan_input = keras.Input(shape=(latent_dim,))
-fake_image = generator(gan_input)
-gan_output = discriminator(fake_image)
+    @property
+    def metrics(self):
+        return [self.d_loss_metric, self.g_loss_metric]
 
-gan = keras.Model(gan_input, gan_output)
+    def train_step(self, real_images):
+        batch_size = tf.shape(real_images)[0]
+        random_latent_vectors = tf.random.normal(shape=(batch_size, self.latent_dim))
+        generated_images = self.generator(random_latent_vectors)
+        combined_images = tf.concat([generated_images, real_images], axis=0)
+        labels = tf.concat([tf.ones((batch_size, 1)), tf.zeros((batch_size, 1))], axis=0)
+        labels += 0.05 * tf.random.uniform(tf.shape(labels))
 
+        with tf.GradientTape as tape:
+            predictions = self.discriminator(combined_images)
+            d_loss = self.loss_fn(labels, predictions)
+
+        grads = tape.gradient(d_loss, self.discriminator.trainable_weights)
+        self.d_optimizer.apply_gradients(zip(grads, self.discriminator.trainable_weights))
+
+        random_latent_vectors = tf.random.normal(shape=(batch_size, self.latent_dim))
+        misleading_labels = tf.zeros((batch_size, 1))
+
+        with tf.GradientTape as tape:
+            predictions = self.discriminator(self.generator(random_latent_vectors))
+            g_loss = self.loss_fn(misleading_labels, predictions)
+        grads = tape.gradient(g_loss, self.generator.trainable_weights)
+        self.g_optimizer.apply_gradients(zip(grads, self.generator.trainable_weights))
+
+        self.d_loss_metric.update_state(d_loss)
+        self.g_loss_metric.update_state(g_loss)
+
+        return {
+            "d_loss": self.d_loss_metric.result(),
+            "g_loss": self.g_loss_metric.result()
+        }
+
+class GANMonitor(keras.callbacks.Callback):
+    def __init__(self, num_img=3, latent_dim=128):
+        self.num_img = num_img
+        self.latent_dim = latent_dim
+
+    def on_epoch_end(self, epoch, logs=None):
+        random_latent_vectors = tf.random.normal(
+            shape=(self.num_img, self.latent_dim))
+        generated_images = self.model.generator(random_latent_vectors)
+        generated_images *= 255
+        generated_images.numpy()
+
+        for i in range(self.num_img):
+            img = keras.utils.array_to_img(generated_images[i])
+            img.save(f"generated_img_{epoch:03d}_{i}.png")
+
+
+epochs = 100
+gan = GAN(discriminator=discriminator, generator=generator, latent_dim=latent_dim)
 gan.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
-    loss="binary_crossentropy"
+    d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+    g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+    loss_fn=keras.losses.BinaryCrossentropy(),
+)
+gan.fit(
+    train_data, epochs=epochs,
+    callbacks=[GANMonitor(num_img=10, latent_dim=latent_dim)]
 )
 
-batch_size = 128
-epochs = 500
-half_batch = batch_size // 2
-
-for epoch in range(epochs):
-
-    # Sample real images
-    idx = np.random.randint(0, train_data.shape[0], half_batch)
-    real_images = train_data[idx]
-    real_labels = np.ones((half_batch, 1))
-
-    # Generate fake images
-    noise = np.random.normal(0, 1, (half_batch, latent_dim))
-    fake_images = generator.predict(noise, verbose=0)
-    fake_labels = np.zeros((half_batch, 1))
-
-    # Train discriminator on real and fake
-    d_loss_real = discriminator.train_on_batch(real_images, real_labels)
-    d_loss_fake = discriminator.train_on_batch(fake_images, fake_labels)
-    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-    noise = np.random.normal(0, 1, (batch_size, latent_dim))
-    misleading_labels = np.ones((batch_size, 1))  # generator wants "real"
-
-    g_loss = gan.train_on_batch(noise, misleading_labels)
-
-    print(f"{epoch} [D loss: {d_loss[0]:.4f}, acc.: {d_loss[1] * 100:.2f}%] [G loss: {g_loss:.4f}]")
-
-def show_generated_images(generator, epoch):
-    noise = np.random.normal(0, 1, (16, latent_dim))
-    images = generator.predict(noise)
-    images = images.reshape(16, 28, 28)
-
-    plt.figure(figsize=(4, 4))
-    for i in range(16):
-        plt.subplot(4, 4, i + 1)
-        plt.imshow(images[i], cmap="gray")
-        plt.axis("off")
-    plt.suptitle(f"Epoch {epoch}")
-    plt.show()
-
-show_generated_images(generator, epochs - 1)
+# discriminator.compile(
+#     optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
+#     loss="binary_crossentropy",
+#     metrics=["accuracy"]
+# )
+#
+# discriminator.trainable = False
+#
+# gan_input = keras.Input(shape=(latent_dim,))
+# fake_image = generator(gan_input)
+# gan_output = discriminator(fake_image)
+#
+# gan = keras.Model(gan_input, gan_output)
+#
+# gan.compile(
+#     optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
+#     loss="binary_crossentropy"
+# )
+#
+# batch_size = 128
+# epochs = 500
+# half_
