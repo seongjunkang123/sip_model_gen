@@ -70,13 +70,14 @@ class GAN(keras.Model):
 
     def train_step(self, real_images):
         batch_size = tf.shape(real_images)[0]
+        print(batch_size)
         random_latent_vectors = tf.random.normal(shape=(batch_size, self.latent_dim))
         generated_images = self.generator(random_latent_vectors)
         combined_images = tf.concat([generated_images, real_images], axis=0)
         labels = tf.concat([tf.ones((batch_size, 1)), tf.zeros((batch_size, 1))], axis=0)
         labels += 0.05 * tf.random.uniform(tf.shape(labels))
 
-        with tf.GradientTape as tape:
+        with tf.GradientTape() as tape:
             predictions = self.discriminator(combined_images)
             d_loss = self.loss_fn(labels, predictions)
 
@@ -86,9 +87,10 @@ class GAN(keras.Model):
         random_latent_vectors = tf.random.normal(shape=(batch_size, self.latent_dim))
         misleading_labels = tf.zeros((batch_size, 1))
 
-        with tf.GradientTape as tape:
+        with tf.GradientTape() as tape:
             predictions = self.discriminator(self.generator(random_latent_vectors))
             g_loss = self.loss_fn(misleading_labels, predictions)
+
         grads = tape.gradient(g_loss, self.generator.trainable_weights)
         self.g_optimizer.apply_gradients(zip(grads, self.generator.trainable_weights))
 
@@ -108,16 +110,15 @@ class GANMonitor(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         random_latent_vectors = tf.random.normal(
             shape=(self.num_img, self.latent_dim))
-        generated_images = self.model.generator(random_latent_vectors)
-        generated_images *= 255
-        generated_images.numpy()
+        # generated_images = self.model.generator(random_latent_vectors)
+        # generated_images *= 255
+        # generated_images.numpy()
 
-        for i in range(self.num_img):
-            img = keras.utils.array_to_img(generated_images[i])
-            img.save(f"generated_img_{epoch:03d}_{i}.png")
+        # for i in range(self.num_img):
+        #     img = keras.utils.array_to_img(generated_images[i])
+        #     img.save(f"generated_img_{epoch:03d}_{i}.png")
 
-
-epochs = 100
+epochs = 50
 gan = GAN(discriminator=discriminator, generator=generator, latent_dim=latent_dim)
 gan.compile(
     d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
@@ -128,26 +129,3 @@ gan.fit(
     train_data, epochs=epochs,
     callbacks=[GANMonitor(num_img=10, latent_dim=latent_dim)]
 )
-
-# discriminator.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
-#     loss="binary_crossentropy",
-#     metrics=["accuracy"]
-# )
-#
-# discriminator.trainable = False
-#
-# gan_input = keras.Input(shape=(latent_dim,))
-# fake_image = generator(gan_input)
-# gan_output = discriminator(fake_image)
-#
-# gan = keras.Model(gan_input, gan_output)
-#
-# gan.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
-#     loss="binary_crossentropy"
-# )
-#
-# batch_size = 128
-# epochs = 500
-# half_
