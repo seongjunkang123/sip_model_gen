@@ -137,5 +137,5 @@ discriminator.save(DIS_WEIGHTS_PATH)
 generator.save(GEN_WEIGHTS_PATH)
 
 # save performance
-with open(GAN_PERF_PATH, 'w') as f:
+with open(GAN_PERF_PATH, 'wb') as f:
     pickle.dump(history.history, f)
