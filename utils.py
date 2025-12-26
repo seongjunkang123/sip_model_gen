@@ -2,8 +2,13 @@ import os
 
 def get_version():
     gen_model_weights_directory = './gen_model_weights'
-    sorted_files = sorted(os.listdir(gen_model_weights_directory))
 
+    try: 
+        sorted_files = sorted(os.listdir(gen_model_weights_directory))
+    except FileNotFoundError:
+        os.makedirs(gen_model_weights_directory)
+        sorted_files = []
+    
     last_index = len(sorted_files) - 1
     if last_index < 0:
         v = 1
