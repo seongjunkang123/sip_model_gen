@@ -20,9 +20,12 @@ plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 # plt.grid()
-plt.savefig(f'./gan_model_performance/gan_v{VERSION}.png')
-plt.show()
 
 # print min losses
 print("min discriminator loss: ", min(history['d_loss']))
 print("min generator loss: ", min(history['g_loss']))
+
+HISTORY_IMG_PATH = f"./gan_model_performance/gan_v{VERSION}.png"
+if not os.path.exists(HISTORY_IMG_PATH):
+    plt.savefig(HISTORY_IMG_PATH)
+plt.show()
