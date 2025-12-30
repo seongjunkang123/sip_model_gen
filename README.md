@@ -1,10 +1,10 @@
 # sip_model_gen
 
-This repository contains the implementation of a Conditional Generative Adversarial Network (CGAN) designed to generate synthetic Volatile Organic Compound (VOC) profiles for various respiratory diseases, including Asthma, Bronchitis, and COPD. The model is built using TensorFlow and Keras.
+This repository contains the implementation of a Conditional Tabular Generative Adversarial Network (CTGAN) designed to generate synthetic Volatile Organic Compound (VOC) profiles for the three respiratory diseases: Asthma, Bronchitis, and COPD. The model is built using TensorFlow and Keras.
 
 ## Project Overview
 
-The core of this project is a CTGAN (Conditional GAN) that learns the distribution of VOCs from patient data. By providing a disease label (e.g., 'asthma'), the generator can produce new, realistic VOC profiles that are characteristic of that condition. This can be valuable for augmenting limited datasets, balancing class distributions, and for further research into disease biomarkers.
+The core of this project is a CTGAN (Conditional Tabular GAN) that learns the distribution of VOCs from patient data. By providing a disease label (e.g., 'asthma'), the generator can produce new, realistic VOC profiles that are characteristic of that condition. This can be valuable for augmenting limited datasets, balancing class distributions, and for further research into disease biomarkers.
 
 The repository includes scripts for:
 *   Preprocessing and combining raw data from multiple sources.
@@ -79,14 +79,14 @@ During training, the script will:
 After training is complete, use the `history.py` script to generate a plot of the generator and discriminator loss curves. This helps in assessing the training stability and performance.
 
 ```bash
-# The script defaults to the latest version, or you can modify the VERSION variable inside it.
+# You can modify the VERSION variable inside it to change the version of the CTGAN
 python history.py
 ```
 This will save a `.png` plot in the `gan_model_performance` directory and display it.
 
 ## Docker Usage
 
-The provided `Dockerfile` allows you to build a container with all necessary dependencies to run the project in an isolated environment.
+The provided `Dockerfile` allows you to build a container with all necessary dependencies to run the project in an isolated environment. 
 
 ### 1. Build the Docker Image
 Navigate to the root of this repository (`sip_model_gen`) and run the following command:
