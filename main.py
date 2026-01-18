@@ -55,8 +55,12 @@ def build_generator():
 
     # change activation to LeakyReLU
     gen = layers.Concatenate()([latent_vector, label])
-    gen = layers.Dense(128, activation='relu')(gen)
-    gen = layers.Dense(256, activation='relu')(gen)
+    gen = layers.Dense(128)(gen)
+    gen = layers.LeakyReLU(alpha=0.4)(gen)
+    gen = layers.Dropout(0.5)(gen)
+    gen = layers.Dense(256)(gen)
+    gen = layers.LeakyReLU(alpha=0.4)(gen)
+    gen = layers.Dropout(0.5)(gen)
     gen = layers.Dense(NUM_VOCS, activation='linear')(gen)
 
     return Model([latent_vector, label], gen, name=f"gen_v{v}")
@@ -67,8 +71,10 @@ def build_discriminator():
     label = layers.Input(shape=(NUM_CLASS, ))
 
     dis = layers.Concatenate()([voc_profile, label])
-    dis = layers.Dense(256, activation='relu')(dis)
-    dis = layers.Dense(128, activation='relu')(dis)
+    dis = layers.Dense(256)(dis)
+    dis = layers.LeakyReLU(alpha=0.4)(dis)
+    dis = layers.Dense(128)(dis)
+    dis = layers.LeakyReLU(alpha=0.4)(dis)
     dis = layers.Dense(1, activation='sigmoid')(dis)
 
     return Model([voc_profile, label], dis, name=f"dis_v{v}")
@@ -104,10 +110,10 @@ with open(DIS_INFO_PATH, 'w') as f:
     discriminator.summary(print_fn=lambda x: f.write(x + '\n'))
 
 # save model info as image
-plot_model(generator, to_file=GEN_INFO_IMG_PATH,
-           show_shapes=True, show_layer_names=True, dpi=96)
-plot_model(discriminator, to_file=DIS_INFO_IMG_PATH,
-           show_shapes=True, show_layer_names=True, dpi=96)
+# plot_model(generator, to_file=GEN_INFO_IMG_PATH,
+#            show_shapes=True, show_layer_names=True, dpi=96)
+# plot_model(discriminator, to_file=DIS_INFO_IMG_PATH,
+#            show_shapes=True, show_layer_names=True, dpi=96)
 
 # make GAN
 gan = CTGAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIM, num_classes=NUM_CLASS)
