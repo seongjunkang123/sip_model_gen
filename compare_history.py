@@ -40,12 +40,12 @@ plt.legend()
 
 # print min losses
 print(f"Trial #{VERSION_1}")
-print("min discriminator loss: ", round(min(history_1['d_loss']), 10))
-print("min generator loss: ", round(min(history_1['g_loss'])), 10)
+print("min discriminator loss: ", round(min(history_1['d_loss']), 100))
+print("min generator loss: ", round(min(history_1['g_loss']), 100))
 
 print(f"Trial #{VERSION_2}")
-print("min discriminator loss: ", round(min(history_2['d_loss']), 10))
-print("min generator loss: ", round(min(history_2['g_loss'])), 10)
+print("min discriminator loss: ", round(min(history_2['d_loss']), 100))
+print("min generator loss: ", round(min(history_2['g_loss']), 100))
 
 # HISTORY_IMG_PATH = f"./gan_model_performance/gan_v{VERSION}.png"
 # if not os.path.exists(HISTORY_IMG_PATH):
