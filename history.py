@@ -2,7 +2,7 @@
 
 import pickle, matplotlib.pyplot as plt, os
 
-VERSION = 1
+VERSION = input("Trial Number: ")
 HISTORY_PATH = f"./gan_model_performance/gan_v{VERSION}.pkl"
 
 if not os.path.exists(HISTORY_PATH):
