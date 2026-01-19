@@ -12,7 +12,7 @@ from utils import get_version
 
 # define global variables (manipulate them)
 BATCH_SIZE = 16
-EPOCHS = 100
+EPOCHS = 500
 
 # get model version
 v = get_version()
@@ -55,12 +55,15 @@ def build_generator():
 
     # change activation to LeakyReLU
     gen = layers.Concatenate()([latent_vector, label])
-    gen = layers.Dense(128)(gen)
-    gen = layers.LeakyReLU(alpha=0.4)(gen)
-    gen = layers.Dropout(0.5)(gen)
+
     gen = layers.Dense(256)(gen)
-    gen = layers.LeakyReLU(alpha=0.4)(gen)
-    gen = layers.Dropout(0.5)(gen)
+    gen = layers.LeakyReLU(alpha=0.2)(gen)
+    gen = layers.BatchNormalization()(gen)
+
+    gen = layers.Dense(128)(gen)
+    gen = layers.LeakyReLU(alpha=0.2)(gen)
+    gen = layers.BatchNormalization()(gen)
+
     gen = layers.Dense(NUM_VOCS, activation='linear')(gen)
 
     return Model([latent_vector, label], gen, name=f"gen_v{v}")
@@ -71,10 +74,15 @@ def build_discriminator():
     label = layers.Input(shape=(NUM_CLASS, ))
 
     dis = layers.Concatenate()([voc_profile, label])
-    dis = layers.Dense(256)(dis)
+
+    dis = layers.SpectralNormalization(layers.Dense(512))(dis)
     dis = layers.LeakyReLU(alpha=0.4)(dis)
-    dis = layers.Dense(128)(dis)
+    dis = layers.Dropout(0.2)(dis)
+
+    dis = layers.SpectralNormalization(layers.Dense(256))(dis)
     dis = layers.LeakyReLU(alpha=0.4)(dis)
+    dis = layers.Dropout(0.2)(dis)
+
     dis = layers.Dense(1, activation='sigmoid')(dis)
 
     return Model([voc_profile, label], dis, name=f"dis_v{v}")
@@ -87,9 +95,9 @@ GEN_WEIGHTS_PATH    = f"./gen_model_weights/gen_v{v}.keras"
 GEN_INFO_PATH       = f"./gen_model_info/gen_v{v}.txt"
 GEN_INFO_IMG_PATH   = f"./gen_model_info/gen_v{v}.png"
 
-DIS_WEIGHTS_PATH    = f"./dis_model_weights/gen_v{v}.keras"
-DIS_INFO_PATH       = f"./dis_model_info/gen_v{v}.txt"
-DIS_INFO_IMG_PATH   = f"./dis_model_info/gen_v{v}.png"
+DIS_WEIGHTS_PATH    = f"./dis_model_weights/dis_v{v}.keras"
+DIS_INFO_PATH       = f"./dis_model_info/dis_v{v}.txt"
+DIS_INFO_IMG_PATH   = f"./dis_model_info/dis_v{v}.png"
 
 GAN_WEIGHTS_PATH    = f"./gan_model_weights/gan_v{v}.keras"
 GAN_PERF_PATH       = f"./gan_model_performance/gan_v{v}.pkl"
@@ -101,6 +109,7 @@ with open(GEN_INFO_PATH, 'w') as f:
     f.write(f"Latent Dimension: {LATENT_DIM}\n")
     f.write(f"Number of Classes: {NUM_CLASS}\n")
     f.write(f"Number of VOCs: {NUM_VOCS}\n")
+    f.write(f"Epoch: {EPOCHS}\n")
     f.write(f"Batch Size: {BATCH_SIZE}\n\n")
 
     generator.summary(print_fn=lambda x: f.write(x + '\n'))
