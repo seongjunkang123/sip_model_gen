@@ -1,0 +1,6 @@
+.venv
+.idea
+.learning
+__pycache__/
+media
+diagrams
